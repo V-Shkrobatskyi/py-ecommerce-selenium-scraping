@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup, Tag
 
 
 BASE_URL = "https://webscraper.io/"
-HOME_URL = urljoin(BASE_URL, "test-sites/e-commerce/allinone")
+HOME_URL = urljoin(BASE_URL, "test-sites/e-commerce/more")
 COMPUTERS_URL = urljoin(BASE_URL, "test-sites/e-commerce/more/computers")
 LAPTOPS_URL = urljoin(BASE_URL, "test-sites/e-commerce/static/computers/laptops")
 TABLETS_URL = urljoin(BASE_URL, "test-sites/e-commerce/more/computers/tablets")
@@ -21,7 +21,7 @@ PHONES_URL = urljoin(BASE_URL, "test-sites/e-commerce/more/phones")
 TOUCH_URL = urljoin(BASE_URL, "test-sites/e-commerce/more/phones/touch")
 
 pages_list = {
-    # "home": HOME_URL,
+    "home": HOME_URL,
     # "computers": COMPUTERS_URL,
     "laptops": LAPTOPS_URL,
     # "tablets": TABLETS_URL,
