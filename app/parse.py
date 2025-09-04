@@ -22,7 +22,7 @@ TOUCH_URL = urljoin(BASE_URL, "test-sites/e-commerce/more/phones/touch")
 
 pages_list = {
     "home": HOME_URL,
-    # "computers": COMPUTERS_URL,
+    "computers": COMPUTERS_URL,
     "laptops": LAPTOPS_URL,
     # "tablets": TABLETS_URL,
     # "phones": PHONES_URL,
