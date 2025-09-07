@@ -21,7 +21,8 @@ HOME_URL = urljoin(BASE_URL, "test-sites/e-commerce/more")
 COMPUTERS_URL = urljoin(BASE_URL, "test-sites/e-commerce/more/computers")
 LAPTOPS_URL = urljoin(
     BASE_URL,
-    "test-sites/e-commerce/static/computers/laptops"
+    # "test-sites/e-commerce/static/computers/laptops"
+    "test-sites/e-commerce/more/computers/laptops"
 )
 TABLETS_URL = urljoin(BASE_URL, "test-sites/e-commerce/more/computers/tablets")
 PHONES_URL = urljoin(BASE_URL, "test-sites/e-commerce/more/phones")
@@ -143,37 +144,47 @@ def get_single_page_products(page_soup: Tag) -> list[Product]:
 
 def get_all_products() -> None:
     logging.info("Start parsing laptops")
-    btn_more = "a.btn.btn-lg.btn-block.btn-primary.ecomerce-items-scroll-more"
+    btn_accept_cookies_selector = ".acceptCookies"
+    btn_more_selector = \
+        "a.btn.btn-lg.btn-block.btn-primary.ecomerce-items-scroll-more"
 
     for filename, page_url in pages_list.items():
         driver = get_driver()
         driver.get(page_url)
+
+        # press button for accept cookies if exist
+        try:
+            button_accept_cookies = WebDriverWait(driver, 3).until(
+                ec.element_to_be_clickable(
+                    (By.CSS_SELECTOR, btn_accept_cookies_selector,)
+                )
+            )
+            button_accept_cookies.click()
+            time.sleep(1)
+        except (TimeoutException, NoSuchElementException):
+            logging.info("There is no more button for accept cookies")
+            break
+
+        # press button "more" (load more products) if exist
         while True:
             try:
-                button = WebDriverWait(driver, 3).until(
+                button_more = WebDriverWait(driver, 3).until(
                     ec.element_to_be_clickable(
-                        (By.CSS_SELECTOR, btn_more,)
+                        (By.CSS_SELECTOR, btn_more_selector,)
                     )
                 )
-                button.click()
+                button_more.click()
                 time.sleep(1)
             except (TimeoutException, NoSuchElementException):
                 logging.info("There is no more button 'More'")
                 break
 
+        # parse all products
         page_html = driver.page_source
         soup = BeautifulSoup(page_html, "html.parser")
         all_products = get_single_page_products(soup)
 
-        # num of pages
-        num_pages = get_num_pages(soup)
-        # iterate
-        for page_num in range(2, num_pages + 1):    # num_pages + 1
-            logging.info(f"Start parsing page #{page_num}")
-            text = requests.get(page_url, {"page": page_num}).content
-            next_page_soup = BeautifulSoup(text, "html.parser")
-            all_products.extend(get_single_page_products(next_page_soup))
-
+        # write products to csv
         write_products_to_csv(all_products, filename)
 
 
