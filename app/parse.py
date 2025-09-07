@@ -28,12 +28,12 @@ pages_list = {
     "computers": COMPUTERS_URL,
     "laptops": LAPTOPS_URL,
     "tablets": TABLETS_URL,
-    # "phones": PHONES_URL,
-    # "touch": TOUCH_URL,
+    "phones": PHONES_URL,
+    "touch": TOUCH_URL,
 }
 
 
-# selenium headless mode options
+# selenium headless mode options for hide browser window
 options = Options()
 options.add_argument("--headless=new")
 options.add_argument("--window-size=1920,1080")
@@ -50,9 +50,6 @@ def set_driver(new_driver: WebDriver) -> None:
     _driver = new_driver
 
 
-
-
-
 @dataclass
 class Product:
     title: str
@@ -60,7 +57,7 @@ class Product:
     price: float
     rating: int
     num_of_reviews: int
-    additional_info: dict
+    # additional_info: dict | None
 
 
 PRODUCT_FIELDS   = [field.name for field in fields(Product)]
@@ -75,37 +72,47 @@ logging.basicConfig(
 )
 
 
-def parse_hdd_block_price(product_soup: Tag) -> dict[str, float]:
+def parse_additional_info(product_soup: Tag) -> tuple[dict[str, float], int]:
     absolute_url = urljoin(BASE_URL, product_soup.select_one(".title")["href"])
     driver = get_driver()
     driver.get(absolute_url)
-    swatches = driver.find_element(By.CLASS_NAME, "swatches")
-    buttons = swatches.find_elements(By.TAG_NAME, "button")
-
     prices = {}
-    for button in buttons:
-        if not button.get_property("disabled"):
-            button.click()
-            prices[button.get_property("value")] = float(
-                driver.find_element(
-                    By.CLASS_NAME,"price"
-                ).text.replace("$", "")
-            )
-    return prices
+    soup = BeautifulSoup(driver.page_source, "html.parser")
+    stars = soup.select("span.ws-icon-star")
+
+    if soup.select_one("div.swatches"):
+        swatches = driver.find_element(By.CLASS_NAME, "swatches")
+        buttons = swatches.find_elements(By.TAG_NAME, "button")
+
+        for button in buttons:
+            if not button.get_property("disabled"):
+                button.click()
+                prices[button.get_property("value")] = float(
+                    driver.find_element(
+                        By.CLASS_NAME,"price"
+                    ).text.replace("$", "")
+                )
+
+    return prices, len(stars)
 
 
 def parse_single_product(product: Tag) -> Product:
-    hdd_prices = parse_hdd_block_price(product)
-    rating_tag = product.select_one("p[data-rating]")
+    hdd_prices, detailed_rating = parse_additional_info(product)
+    stars = product.select("span.ws-icon-star")
+    rating = len(stars)
+    # on laptops list page ratings of all products is 5
+    # but in details it is not, so let's choose rating from details
+    # if rating != detailed_rating:
+    #     rating = detailed_rating
 
     return Product(
         title=product.select_one(".title")["title"],
         description=product.select_one(".description").text,
         price=float(product.select_one(".price").text.replace("$","")),
-        # rating=int(product.select_one("p[data-rating]")["data-rating"]),
-        rating=int(rating_tag["data-rating"]) if rating_tag else None,
+        rating=rating,
         num_of_reviews=int(product.select_one(".review-count").text.split()[0]),
-        additional_info={"hdd_price": hdd_prices}
+        # additional_info={"hdd_price": hdd_prices} if hdd_prices else {}
+        # additional_info = {"hdd_price": hdd_prices}
     )
 
 
@@ -114,8 +121,8 @@ def get_num_pages(page_soup: Tag) -> int:
 
     if pagination is None:
         return 1
-    # return int(pagination.select("li")[-2].text)
-    return 2
+    return int(pagination.select("li")[-2].text)
+    # return 2
 
 
 def get_single_page_products(page_soup: Tag) -> list[Product]:
@@ -137,9 +144,9 @@ def get_all_products() -> None:
                     )
                 )
                 button.click()
-                time.sleep(2)
+                time.sleep(1)
             except:
-                print("Більше немає кнопки 'More'")
+                logging.info("There is no more button 'More'")
                 break
 
         page_html = driver.page_source
@@ -166,7 +173,7 @@ def write_products_to_csv(products: list[Product], filename: str) -> None:
 
 
 def main():
-    with webdriver.Chrome() as driver: # "options=options" hide browser window
+    with webdriver.Chrome(options=options) as driver: # "options=options" hide browser window
         set_driver(driver)
         get_all_products()
 
