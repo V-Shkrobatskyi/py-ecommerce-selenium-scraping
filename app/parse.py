@@ -12,7 +12,6 @@ from selenium.webdriver.support import expected_conditions as ec
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from urllib.parse import urljoin
 
-import requests
 from bs4 import BeautifulSoup, Tag
 
 
@@ -21,7 +20,6 @@ HOME_URL = urljoin(BASE_URL, "test-sites/e-commerce/more")
 COMPUTERS_URL = urljoin(BASE_URL, "test-sites/e-commerce/more/computers")
 LAPTOPS_URL = urljoin(
     BASE_URL,
-    # "test-sites/e-commerce/static/computers/laptops"
     "test-sites/e-commerce/more/computers/laptops"
 )
 TABLETS_URL = urljoin(BASE_URL, "test-sites/e-commerce/more/computers/tablets")
