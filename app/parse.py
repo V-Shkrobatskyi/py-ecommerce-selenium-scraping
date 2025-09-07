@@ -127,14 +127,6 @@ def parse_single_product(product: Tag) -> Product:
     )
 
 
-def get_num_pages(page_soup: Tag) -> int:
-    pagination = page_soup.select_one(".pagination")
-
-    if pagination is None:
-        return 1
-    return int(pagination.select("li")[-2].text)
-
-
 def get_single_page_products(page_soup: Tag) -> list[Product]:
     products = page_soup.select(".card-body")
     return [parse_single_product(product) for product in products]
@@ -160,8 +152,7 @@ def get_all_products() -> None:
             button_accept_cookies.click()
             time.sleep(1)
         except (TimeoutException, NoSuchElementException):
-            logging.info("There is no more button for accept cookies")
-            break
+            logging.info("There is no button for accept cookies — continue")
 
         # press button "more" (load more products) if exist
         while True:
