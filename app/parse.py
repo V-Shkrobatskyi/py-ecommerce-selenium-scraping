@@ -8,7 +8,8 @@ from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as Ec
+from selenium.webdriver.support import expected_conditions as ec
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from urllib.parse import urljoin
 
 import requests
@@ -18,7 +19,10 @@ from bs4 import BeautifulSoup, Tag
 BASE_URL = "https://webscraper.io/"
 HOME_URL = urljoin(BASE_URL, "test-sites/e-commerce/more")
 COMPUTERS_URL = urljoin(BASE_URL, "test-sites/e-commerce/more/computers")
-LAPTOPS_URL = urljoin(BASE_URL, "test-sites/e-commerce/static/computers/laptops")
+LAPTOPS_URL = urljoin(
+    BASE_URL,
+    "test-sites/e-commerce/static/computers/laptops"
+)
 TABLETS_URL = urljoin(BASE_URL, "test-sites/e-commerce/more/computers/tablets")
 PHONES_URL = urljoin(BASE_URL, "test-sites/e-commerce/more/phones")
 TOUCH_URL = urljoin(BASE_URL, "test-sites/e-commerce/more/phones/touch")
@@ -52,6 +56,10 @@ def set_driver(new_driver: WebDriver) -> None:
 
 @dataclass
 class Product:
+    """
+    You can add additional_info to products by uncomment it here
+    and in project below.
+    """
     title: str
     description: str
     price: float
@@ -60,7 +68,7 @@ class Product:
     # additional_info: dict | None
 
 
-PRODUCT_FIELDS   = [field.name for field in fields(Product)]
+PRODUCT_FIELDS = [field.name for field in fields(Product)]
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -89,7 +97,7 @@ def parse_additional_info(product_soup: Tag) -> tuple[dict[str, float], int]:
                 button.click()
                 prices[button.get_property("value")] = float(
                     driver.find_element(
-                        By.CLASS_NAME,"price"
+                        By.CLASS_NAME, "price"
                     ).text.replace("$", "")
                 )
 
@@ -100,17 +108,21 @@ def parse_single_product(product: Tag) -> Product:
     hdd_prices, detailed_rating = parse_additional_info(product)
     stars = product.select("span.ws-icon-star")
     rating = len(stars)
-    # on laptops list page ratings of all products is 5
-    # but in details it is not, so let's choose rating from details
+    ## on laptops list page ratings of all products is 5
+    ## but in details it is not, so if you want to choose rating from details
+    ## just uncomment code below
     # if rating != detailed_rating:
     #     rating = detailed_rating
 
     return Product(
         title=product.select_one(".title")["title"],
         description=product.select_one(".description").text,
-        price=float(product.select_one(".price").text.replace("$","")),
+        price=float(product.select_one(".price").text.replace("$", "")),
         rating=rating,
-        num_of_reviews=int(product.select_one(".review-count").text.split()[0]),
+        num_of_reviews=int(
+            product.select_one(".review-count").text.split()[0]
+        ),
+        ## for add additional_info to products uncomment lines below
         # additional_info={"hdd_price": hdd_prices} if hdd_prices else {}
         # additional_info = {"hdd_price": hdd_prices}
     )
@@ -122,7 +134,6 @@ def get_num_pages(page_soup: Tag) -> int:
     if pagination is None:
         return 1
     return int(pagination.select("li")[-2].text)
-    # return 2
 
 
 def get_single_page_products(page_soup: Tag) -> list[Product]:
@@ -132,6 +143,7 @@ def get_single_page_products(page_soup: Tag) -> list[Product]:
 
 def get_all_products() -> None:
     logging.info("Start parsing laptops")
+    btn_more = "a.btn.btn-lg.btn-block.btn-primary.ecomerce-items-scroll-more"
 
     for filename, page_url in pages_list.items():
         driver = get_driver()
@@ -139,13 +151,13 @@ def get_all_products() -> None:
         while True:
             try:
                 button = WebDriverWait(driver, 3).until(
-                    Ec.element_to_be_clickable(
-                        (By.CSS_SELECTOR, "a.btn.btn-lg.btn-block.btn-primary.ecomerce-items-scroll-more")
+                    ec.element_to_be_clickable(
+                        (By.CSS_SELECTOR, btn_more,)
                     )
                 )
                 button.click()
                 time.sleep(1)
-            except:
+            except (TimeoutException, NoSuchElementException):
                 logging.info("There is no more button 'More'")
                 break
 
@@ -172,11 +184,11 @@ def write_products_to_csv(products: list[Product], filename: str) -> None:
         writer.writerows([astuple(product) for product in products])
 
 
-def main():
-    with webdriver.Chrome(options=options) as driver: # "options=options" hide browser window
+def main() -> None:
+    with webdriver.Chrome(options=options) as driver:
         set_driver(driver)
         get_all_products()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
